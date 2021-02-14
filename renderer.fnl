@@ -69,13 +69,21 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 "
 
 (fn box [x1 y1 x2 y2]
-  {:x1 x1
-   :x2 x2
-   :y1 y1
-   :y2 y2
+  {:outer-x1 x1
+   :outer-x2 x2
+   :outer-y1 y1
+   :outer-y2 y2
+   :x1 (+ x1 1)
+   :y1 (+ y1 1)
+   :x2 (- x2 1)
+   :y2 (- y2 1)
    :top-left {:x x1 :y y1}
-   :render-border (fn [cb]
-                    "...")})
+   :bottom-right {:x x2 :y y2}
+   :width (fn [box]
+            (- (. box :x2) (. box :x1)))
+   :height (fn [box]
+             (- (. box :y2) (. box :y1)))
+   })
 
 (fn render-mouse [program]
   (local terminal program.terminal)
@@ -90,27 +98,38 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (terminal.printf mx my block)
   (terminal.color previous-color))
 
-;; TODO: use more height, less width
-(fn render-log-history [program]
+(fn render-log-history [program box]
   (local terminal program.terminal)
   (local tw (terminal.state terminal.TK_WIDTH))
   (local th (terminal.state terminal.TK_HEIGHT))
 
-  (fn repeat [times char]
-    "TODO: some sorta cdef thingy for better perf."
-    (var result "")
-    (for [i 0 times 1]
-      (set result (.. result char)))
-    result)
-  (local height 7)
-  (local top (- th height))
-  (terminal.printf 0 top (repeat tw "═"))
+  (local height (box:height))
+  (local top (. box :y1))
   (let [len (length program.log-history)]
-    (for [i 0 (math.min (- height 1) len)]
-      (local y (+ 1 top i))
+    ;; (print (. box :y1) (. box :y2) height)
+    (for [i 0 (math.min height len)]
+      (local y (+ top i))
       (local entry (. program.log-history (- len i)))
       (when entry
-        (terminal.printf 0 y entry)))))
+        (terminal.printf (. box :x1) y entry)))))
+
+(fn layout []
+  {:boxes {}
+   :add-box (fn [self name box]
+              (tset (. self :boxes) name box))
+   :render-borders
+   (fn [self program]
+     (local terminal program.terminal)
+     (local tw (terminal.state terminal.TK_WIDTH))
+     (local th (terminal.state terminal.TK_HEIGHT))
+     (local cache {})
+     (each [name box (pairs (. self :boxes))]
+       (for [dx 0 (+ 1 (box:width))]
+         (terminal.printf (+ box.outer-x1 dx) box.outer-y1 "═")
+         (terminal.printf (+ box.outer-x1 dx) box.outer-y2 "═"))
+       (for [dy 0 (+ 1 (box:height))]
+         (terminal.printf box.outer-x1 (+ box.outer-y1 dy) "║"))))
+   })
 
 ;; exported
 (fn renderer [program]
@@ -123,7 +142,16 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 
   (terminal.printf 2 1 "World!")
 
-  (render-log-history program (box (- tw 30) 0 tw th))
+  (local my-layout (layout))
+  (my-layout:add-box :main (box -1 -1 60 (- th 10)))
+  (my-layout:add-box :main (box -1 (- th 10) 60 th))
+  (my-layout:add-box :topr (box 60 -1 60 (math.floor (/ th 2))))
+  (my-layout:add-box :botr (box 60 (math.floor (/ th 2)) tw th))
+
+  (my-layout:render-borders program)
+
+  (render-log-history program
+                      (. my-layout.boxes :botr))
 
   ;; Should be rendered last.
   (when program.show-cursor

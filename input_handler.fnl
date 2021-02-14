@@ -11,8 +11,11 @@
                   (= input terminal.TK_Q))]
     (tset program :continue (and (not close)
                                  (not quit))))
-  (when (= input terminal.TK_A)
-    (program.log :dbg "Key pressed: %s" "A"))
+  (when (and (terminal.check terminal.TK_CONTROL)
+             (= input terminal.TK_P))
+    (local mx (terminal.state terminal.TK_MOUSE_X))
+    (local my (terminal.state terminal.TK_MOUSE_Y))
+    (program.log :dbg "Mouse coords: %s:%s" mx my))
 
   ;; (program.log :dbg "Input: %s" input)
 
