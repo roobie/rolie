@@ -9,6 +9,8 @@
 (local program {;; whether to continue execution.
                 :continue true
 
+                :loop-count 0
+
                 ;; stringifier of tables etc.
                 :view view
 
@@ -61,7 +63,9 @@
         (program.log :dbg "Log truncated: %x -> %x" (length old-hist) (length new-hist))))
     (tset program :log-counter (+ 1 program.log-counter))
     (local msg (string.format fmt ...))
-    (local entry (string.format "%s|%08x> %s" level program.log-counter msg))
+    (local entry (string.format
+                  "%s|%s|%08x> %s"
+                  level program.loop-count program.log-counter msg))
     (print entry)
     (let [entries (. program :log-history)]
       (table.insert entries entry))))
@@ -77,23 +81,26 @@
 (fn reload [modname]
   "Reload the module named `modname'."
   (program.log :dbg "Reloading: %s" modname)
-  (tset program modname (re-require modname)))
+  (let [mod (re-require modname)]
+    (tset program modname mod)
+    mod))
 
 
 (fn main-loop []
   (while program.continue
-    (program.renderer program)
     (program.processor program)
-    (let [input (program.input_handler program)]
+    (program.renderer program)
+    (let [input (program.input_dispatcher program)]
       (when (= input.read terminal.TK_RESIZED)
         (local tw (terminal.state terminal.TK_WIDTH))
         (local th (terminal.state terminal.TK_HEIGHT))
-        (local adjusted-tw (math.max tw program.minimal-dimensions.width))
-        (local adjusted-th (math.max th program.minimal-dimensions.height))
-        (terminal.set (string.format "window.size=%dx%d" adjusted-tw adjusted-th)))
+        (local ok-tw (math.max tw program.minimal-dimensions.width))
+        (local ok-th (math.max th program.minimal-dimensions.height))
+        (terminal.set (string.format "window.size=%dx%d" ok-tw ok-th)))
       )
-    )
-  )
+    (tset program :loop-count (+ 1 program.loop-count)))
+
+  (program.log :inf "Exiting program. Bye."))
 
 
 (fn setopt [k v]
@@ -110,15 +117,26 @@
 
 (fn program.reload []
   (reload :renderer)
+
   (reload :processor)
-  (reload :input_handler)
+
+  (local global-input (reload :global_input))
+  (global-input program)
+
+  (reload :input_dispatcher)
+
   (program.log :inf "System reloaded."))
 
 
 (fn program.run []
   (tset program :renderer (require :renderer))
+
   (tset program :processor (require :processor))
-  (tset program :input_handler (require :input_handler))
+
+  (local global-input (require :global_input))
+  (global-input program)
+
+  (tset program :input_dispatcher (require :input_dispatcher))
 
   (terminal.open)
 
