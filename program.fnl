@@ -5,7 +5,10 @@
 (local terminal (require :BearLibTerminal))
 
 (local program {:continue true
+                :view view
                 :terminal terminal})
+
+(terminal.set "window.title='krig v1.0.0'")
 
 (fn program.pp [value]
   "Pretty print a value to stdout."
