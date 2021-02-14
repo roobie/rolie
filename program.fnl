@@ -13,6 +13,7 @@
                              :err 5
                              :fat 6}
                 :log-level :dbg
+                :log-counter 0
                 :log-history {}
                 :terminal terminal
                 :colors {}})
@@ -24,7 +25,9 @@
 (fn program.log [level fmt ...]
   (local levels (. program :log-levels))
   (when (>= (. levels level) (. levels program.log-level))
-    (local entry (.. (os.time) "|" level "> " (string.format fmt ...)))
+    (tset program :log-counter (+ 1 program.log-counter))
+    (local msg (string.format fmt ...))
+    (local entry (string.format "%s|%08x> %s" level program.log-counter msg))
     (print entry)
     (let [entries (. program :log-history)]
       (table.insert entries entry))))
