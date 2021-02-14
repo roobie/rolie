@@ -68,6 +68,15 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 
 "
 
+(fn box [x1 y1 x2 y2]
+  {:x1 x1
+   :x2 x2
+   :y1 y1
+   :y2 y2
+   :top-left {:x x1 :y y1}
+   :render-border (fn [cb]
+                    "...")})
+
 (fn render-mouse [program]
   (local terminal program.terminal)
   (local mx (terminal.state terminal.TK_MOUSE_X))
@@ -81,12 +90,14 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (terminal.printf mx my block)
   (terminal.color previous-color))
 
+;; TODO: use more height, less width
 (fn render-log-history [program]
   (local terminal program.terminal)
   (local tw (terminal.state terminal.TK_WIDTH))
   (local th (terminal.state terminal.TK_HEIGHT))
 
   (fn repeat [times char]
+    "TODO: some sorta cdef thingy for better perf."
     (var result "")
     (for [i 0 times 1]
       (set result (.. result char)))
@@ -112,7 +123,7 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 
   (terminal.printf 2 1 "World!")
 
-  (render-log-history program)
+  (render-log-history program (box (- tw 30) 0 tw th))
 
   ;; Should be rendered last.
   (when program.show-cursor
