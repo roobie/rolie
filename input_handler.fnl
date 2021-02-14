@@ -2,8 +2,7 @@
   (local terminal program.terminal)
 
   (tset program :global-input-handlers
-        [ ;; == ;;
-         {:pattern "C-q"
+        [{:pattern "C-q"
           :short-description "Quit program."
           :func (fn [program]
                   "Stop program."

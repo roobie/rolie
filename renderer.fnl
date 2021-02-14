@@ -115,6 +115,8 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (local terminal program.terminal)
 
   (var i box.y1)
+  (terminal.printf box.x1 i "Global handlers")
+  (set i (+ 1 i))
   (each [_ spec (ipairs program.global-input-handlers)]
     (terminal.printf box.x1 i
                      (string.format "%s = %s" spec.pattern spec.short-description))
