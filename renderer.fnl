@@ -100,8 +100,6 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 
 (fn render-log-history [program box]
   (local terminal program.terminal)
-  (local tw (terminal.state terminal.TK_WIDTH))
-  (local th (terminal.state terminal.TK_HEIGHT))
 
   (local height (box:height))
   (local top (. box :y1))
@@ -112,6 +110,15 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
       (local entry (. program.log-history (- len i)))
       (when entry
         (terminal.printf (. box :x1) y entry)))))
+
+(fn render-input-handlers [program box]
+  (local terminal program.terminal)
+
+  (var i box.y1)
+  (each [_ spec (ipairs program.global-input-handlers)]
+    (terminal.printf box.x1 i
+                     (string.format "%s = %s" spec.pattern spec.short-description))
+    (set i (+ 1 i))))
 
 (fn layout []
   {:boxes {}
@@ -151,8 +158,11 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (render-log-history program
                       (. my-layout.boxes :botr))
 
+  (render-input-handlers program
+                         (. my-layout.boxes :topr))
+
   ;; Should be rendered last.
-  (when program.show-cursor
+  (when program.show-mouse-cursor
     (render-mouse))
   (terminal.refresh)
   )

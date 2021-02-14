@@ -2,7 +2,9 @@
 ;; For debug introspection.
 (local view (require :fennel.fennelview))
 
+
 (local terminal (require :BearLibTerminal))
+
 
 (local program {;; whether to continue execution.
                 :continue true
@@ -30,12 +32,20 @@
                 :minimal-dimensions {:width 80
                                      :height 25}
 
+                ;; currently active input handlers
+                :global-input-handlers {}
+                :local-input-handlers {}
+
                 ;; Lookup for colors.
-                :colors {}})
+                :colors {}
+
+                })
+
 
 (fn program.pp [value]
   "Pretty print a value to stdout."
   (print (view value)))
+
 
 (fn program.log [level fmt ...]
   (local levels (. program :log-levels))
@@ -56,16 +66,19 @@
     (let [entries (. program :log-history)]
       (table.insert entries entry))))
 
+
 (fn re-require [modname]
   "Removes the loaded module and then `require's it anew."
   (local loaded package.loaded)
   (tset loaded modname nil)
   (require modname))
 
+
 (fn reload [modname]
   "Reload the module named `modname'."
   (program.log :dbg "Reloading: %s" modname)
   (tset program modname (re-require modname)))
+
 
 (fn main-loop []
   (while program.continue
@@ -78,12 +91,7 @@
         (local adjusted-tw (math.max tw program.minimal-dimensions.width))
         (local adjusted-th (math.max th program.minimal-dimensions.height))
         (terminal.set (string.format "window.size=%dx%d" adjusted-tw adjusted-th)))
-      (when (and (terminal.check terminal.TK_CONTROL)
-                 (= input.read terminal.TK_R))
-        (reload :renderer)
-        (reload :processor)
-        (reload :input_handler)
-        (program.log :inf "System reloaded.")))
+      )
     )
   )
 
@@ -91,12 +99,21 @@
 (fn setopt [k v]
   (terminal.set (string.format "%s=%s;" k v)))
 
+
 (fn load-colors []
   (local colors (. program :colors))
   (tset colors :white (terminal.color_from_name "white"))
   (tset colors :black (terminal.color_from_name "black"))
 
   colors)
+
+
+(fn program.reload []
+  (reload :renderer)
+  (reload :processor)
+  (reload :input_handler)
+  (program.log :inf "System reloaded."))
+
 
 (fn program.run []
   (tset program :renderer (require :renderer))
@@ -124,5 +141,6 @@
   (main-loop)
 
   (terminal.close))
+
 
 program
