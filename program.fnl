@@ -4,8 +4,13 @@
 
 (local terminal (require :BearLibTerminal))
 
-(local program {:continue true
+(local program {;; whether to continue execution.
+                :continue true
+
+                ;; stringifier of tables etc.
                 :view view
+
+                ;; logging
                 :log-levels {:dbg 1
                              :vrb 2
                              :inf 3
@@ -14,8 +19,18 @@
                              :fat 6}
                 :log-level :dbg
                 :log-counter 0
+                :log-max-entries 0xff
                 :log-history {}
+
+                ;; the `terminal' library
                 :terminal terminal
+
+                ;; These are the minimal dimensions allowed
+                ;; for the terminal window.
+                :minimal-dimensions {:width 80
+                                     :height 25}
+
+                ;; Lookup for colors.
                 :colors {}})
 
 (fn program.pp [value]
@@ -25,6 +40,15 @@
 (fn program.log [level fmt ...]
   (local levels (. program :log-levels))
   (when (>= (. levels level) (. levels program.log-level))
+    ;; truncate too long history, keeping the most recent 50% entries
+    (when (>= (length program.log-history) program.log-max-entries)
+      (let [len (length program.log-history)
+            old-hist program.log-history
+            new-hist {}]
+        (for [i (math.floor (/ len 2)) len]
+          (table.insert new-hist (. old-hist i)))
+        (tset program :log-history new-hist)
+        (program.log :dbg "Log truncated: %x -> %x" (length old-hist) (length new-hist))))
     (tset program :log-counter (+ 1 program.log-counter))
     (local msg (string.format fmt ...))
     (local entry (string.format "%s|%08x> %s" level program.log-counter msg))
@@ -48,6 +72,12 @@
     (program.renderer program)
     (program.processor program)
     (let [input (program.input_handler program)]
+      (when (= input.read terminal.TK_RESIZED)
+        (local tw (terminal.state terminal.TK_WIDTH))
+        (local th (terminal.state terminal.TK_HEIGHT))
+        (local adjusted-tw (math.max tw program.minimal-dimensions.width))
+        (local adjusted-th (math.max th program.minimal-dimensions.height))
+        (terminal.set (string.format "window.size=%dx%d" adjusted-tw adjusted-th)))
       (when (and (terminal.check terminal.TK_CONTROL)
                  (= input.read terminal.TK_R))
         (reload :renderer)

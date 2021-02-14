@@ -140,13 +140,11 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
 
   (terminal.clear)
 
-  (terminal.printf 2 1 "World!")
-
   (local my-layout (layout))
-  (my-layout:add-box :main (box -1 -1 60 (- th 10)))
-  (my-layout:add-box :main (box -1 (- th 10) 60 th))
-  (my-layout:add-box :topr (box 60 -1 60 (math.floor (/ th 2))))
-  (my-layout:add-box :botr (box 60 (math.floor (/ th 2)) tw th))
+  (my-layout:add-box :main (box -1 -1 (- tw 60) (- th 10)))
+  (my-layout:add-box :botl (box -1 (- th 10) (- tw 60) th))
+  (my-layout:add-box :topr (box (- tw 60) -1 tw (math.floor (/ th 2))))
+  (my-layout:add-box :botr (box (- tw 60) (math.floor (/ th 2)) tw th))
 
   (my-layout:render-borders program)
 
