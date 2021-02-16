@@ -15,16 +15,15 @@
          {:pattern "C-d"
           :short-description "Eval some code."
           :func (fn [program]
-                  ;; We can get text input from user - TBD how to run as code,
-                  ;; with correct environment/scope.
                   (local layout program.layout)
                   (local box layout.boxes.botl) ; use bottom left box
                   (local terminal program.terminal)
                   (let [prompt "> "
+                        env {:program program}
                         (len buf) (terminal.read_str box.x1 box.y1 prompt)
                         input (string.sub buf (+ 1 (length prompt)))
                         result-fn (load (.. "return ({" input "})"))
-                        (ok result) (pcall (setfenv result-fn {:program program}))]
+                        (ok result) (pcall (setfenv result-fn env))]
                     (if (not ok)
                         (program.log :wrn "Error: %s" result)
                         (program.log :inf "%s" (program.view result))
