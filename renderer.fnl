@@ -98,18 +98,44 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (terminal.printf mx my block)
   (terminal.color previous-color))
 
+(fn count-pattern [string-value pattern]
+  "-- Equivalent lua function:
+function count(base, pattern)
+  return select(2, string.gsub(base, pattern, ""))
+end"
+
+  (select 2 (string.gsub string-value pattern "")))
+
 (fn render-log-history [program box]
+  ;; TODO: render multiline stuff accordingly.
+  ;; As it stands, entries are overriden by entries below them.
   (local terminal program.terminal)
 
+  (fn clean-string [str]
+    "BearLibTerminal uses [ and ] for markup, so if we want to print them we
+    have to double them."
+    (-> str
+        (string.gsub "%[" "%[%[")
+        (string.gsub "%]" "%]%]")))
+
   (local height (box:height))
+  (local width (box:width))
   (local top (. box :y1))
-  (let [len (length program.log-history)]
+  (let [len (length program.log-history)
+        boundary (math.min height len)]
+    (var i 0)
     ;; (print (. box :y1) (. box :y2) height)
-    (for [i 0 (math.min height len)]
+    (while (< i boundary)
       (local y (+ top i))
-      (local entry (. program.log-history (- len i)))
+      (local entry (clean-string (. program.log-history (- len i))))
+      (set i (+ i 1 (count-pattern entry "\n")))
       (when entry
-        (terminal.printf (. box :x1) y entry)))))
+        (terminal.print (. box :x1)
+                            y
+                            width
+                            height
+                            terminal.TK_ALIGN_DEFAULT
+                            entry)))))
 
 (fn render-input-handlers [program box]
   (local terminal program.terminal)
@@ -154,6 +180,8 @@ U+257x 	╰ 	╱ 	╲ 	╳ 	╴ 	╵ 	╶ 	╷ 	╸ 	╹ 	╺ 	╻ 	╼ 	╽ 	�
   (my-layout:add-box :botl (box -1 (- th 10) (- tw 60) th))
   (my-layout:add-box :topr (box (- tw 60) -1 tw (math.floor (/ th 2))))
   (my-layout:add-box :botr (box (- tw 60) (math.floor (/ th 2)) tw th))
+
+  (tset program :layout my-layout)
 
   (my-layout:render-borders program)
 
