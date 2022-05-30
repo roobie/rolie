@@ -1,6 +1,25 @@
 (fn [program]
   (tset program :global-input-handlers
-        [{:pattern "C-q"
+        [{:pattern "!TK_PERIOD"
+          :friendly-pattern "."
+          :short-description "Step"
+          :func (fn [program]
+                  (program.log :vrb "Step")
+                  (tset program :step 1))}
+
+         {:pattern "!TK_SPACE"
+          :friendly-pattern "Space"
+          :short-description "Un/Pause"
+          :func (fn [program]
+                  (tset program :step-once (not program.step-once))
+                  (program.log
+                   :vrb
+                   (.. "Un/Pause (program.step-once="
+                       (tostring program.step-once)
+                       ")"))
+                  )}
+
+         {:pattern "C-q"
           :short-description "Quit program."
           :func (fn [program]
                   "Stop program."
@@ -19,14 +38,22 @@
                   (local box layout.boxes.botl) ; use bottom left box
                   (local terminal program.terminal)
                   (let [prompt "> "
-                        env {:program program}
+                        env {:program program
+                             :error error
+                             :R (fn [] nil) ; load code from file
+                             :M program.entity-manager
+                             :E program.entities}
                         (len buf) (terminal.read_str box.x1 box.y1 prompt)
                         input (string.sub buf (+ 1 (length prompt)))
-                        result-fn (load (.. "return ({" input "})"))
-                        (ok result) (pcall (setfenv result-fn env))]
-                    (if (not ok)
-                        (program.log :wrn "Error: %s" result)
-                        (program.log :inf "%s" (program.view result))
+                        (result-fn load-err) (load (.. "" input ""))]
+                    (if (= nil result-fn)
+                        (program.log :wrn "Input error: %s\n" load-err)
+                        ;; else
+                        (let [(ok result) (pcall (setfenv result-fn env))]
+                          (if (not ok)
+                              (program.log :wrn "Execution error: %s\n" result)
+                              (program.log :inf "%s" (program.view result))
+                            ))
                         )
                     ))}
 

@@ -145,8 +145,29 @@ end"
   (set i (+ 1 i))
   (each [_ spec (ipairs program.global-input-handlers)]
     (terminal.printf box.x1 i
-                     (string.format "%s = %s" spec.pattern spec.short-description))
+                     (string.format "%s = %s" (or spec.friendly-pattern spec.pattern) spec.short-description))
     (set i (+ 1 i))))
+
+(fn with-color [program color-fg func]
+  (local terminal program.terminal)
+
+  (local previous-color (terminal.state terminal.TK_COLOR))
+  (terminal.color color-fg)
+  (func program)
+  (terminal.color previous-color))
+
+(fn render-entities [program box]
+  (local terminal program.terminal)
+
+  (each [_ entity (ipairs program.entities)]
+    (let [position (. entity :position)
+          representation (. entity :representation)]
+      (with-color program
+       (terminal.color_from_name representation.color)
+       (fn []
+         (terminal.printf (+ box.x1 position.x)
+                          (+ box.y1 position.y)
+                          representation.glyph))))))
 
 (fn layout []
   {:boxes {}
@@ -190,6 +211,9 @@ end"
 
   (render-input-handlers program
                          (. my-layout.boxes :topr))
+
+  (render-entities program
+                   (. my-layout.boxes :main))
 
   ;; Should be rendered last.
   (when program.show-mouse-cursor

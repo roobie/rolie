@@ -41,8 +41,13 @@
                 ;; Lookup for colors.
                 :colors {}
 
-                })
+                :step 1
+                :process-count 0
+                :step-once true
 
+                :entities {}
+                :entity-manager {} ; to be set by processor
+                })
 
 (fn program.pp [value]
   "Pretty print a value to stdout."
@@ -65,7 +70,7 @@
     (local msg (string.format fmt ...))
     (local entry (string.format
                   "%s|%s|%08x> %s"
-                  level program.loop-count program.log-counter msg))
+                  level program.process-count program.log-counter msg))
     (print entry)
     (let [entries (. program :log-history)]
       (table.insert entries entry))))
@@ -89,6 +94,7 @@
 (fn main-loop []
   (while program.continue
     (program.processor program)
+    (tset program :step (math.max 0 (+ -1 program.step)))
     (program.renderer program)
     (let [input (program.input_dispatcher program)]
       (when (= input.read terminal.TK_RESIZED)
@@ -143,6 +149,8 @@
   (setopt :window.title :Rolie-v1.0.0)
   (setopt :window.size :120x45)
   (setopt :window.resizeable :true)
+
+  (setopt :palette.octarine "#50FF25")
 
   (when program.use-mouse
     (setopt :input.mouse-cursor :false)

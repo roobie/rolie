@@ -1,31 +1,48 @@
+
+(fn table? [v]
+  "Test wheter `v' is a table value."
+  (= "table" (type v)))
+
+(fn char-at [pos str]
+  "Get the character at position `pos' in string `str'."
+  (string.sub str pos pos))
+
 (fn input-handler [program]
   (local terminal program.terminal)
 
+  (var input nil)
 
-  ;; blocking read ...
-    (local input (terminal.read))
-
-  (fn table? [v]
-    "Test wheter `v' is a table value."
-    (= "table" (type v)))
-
-  (fn char-at [pos str]
-    "Get the character at position `pos' in string `str'."
-    (string.sub str pos pos))
+  (local do-blocking-read
+         (or (< 0 (terminal.peek))
+             (and program.step-once (< program.step 1))))
+  (if do-blocking-read
+      ;; blocking read ...
+      (set input (terminal.read))
+      (if (< 0 (terminal.peek))
+          (do
+            (print "t" (terminal.peek))
+            (set input (terminal.read)))))
 
   (fn parse-pattern [pattern]
     "Pretty hacky stuff going on here, but works for now."
     (local result {})
-    (when (= "!" (char-at 1 pattern))
-      ;; this is a literal TK_* key
-      (let [tk-key (string.sub pattern 2)]
-        (tset result :tk-key tk-key)))
-    (when (and (= "C" (char-at 1 pattern))
-               (= "-" (char-at 2 pattern)))
-      (tset result :control true)
-      (let [kbkey (char-at 3 pattern)]
-        (tset result :tk-key (.. "TK_" (string.upper kbkey)))))
+    (or
+     (and (= "!" (char-at 1 pattern))
+          (let [tk-key (string.sub pattern 2)]
+            ;; this is a literal TK_* key
+            (tset result :tk-key tk-key)
+            true))
+     (and (= "-" (char-at 2 pattern))
+          (or
+           (and (= "C" (char-at 1 pattern))
+                (let [kbkey (char-at 3 pattern)]
+                  (tset result :control true)
+                  (tset result :tk-key (.. "TK_" (string.upper kbkey)))
+                  true))))
 
+     (let [kbkey (char-at 1 pattern)]
+       (tset result :tk-key (.. "TK_" (string.upper kbkey))))
+     )
     result)
 
   (fn is-applicable [pattern inp]
@@ -50,7 +67,8 @@
       (when (is-applicable spec.pattern input)
         (lua "return spec.func"))))
 
-  (local found-handler (try-find-handler))
+  (when input
+    (local found-handler (try-find-handler))
 
   (when found-handler
     (found-handler program))
@@ -64,6 +82,7 @@
   ;; check if we should stop the program
   (when (= input terminal.TK_CLOSE)
     (tset program :continue false))
+  )
 
   ;; return all data needed by the main loop.
   {:read input})
